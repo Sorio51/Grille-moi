@@ -11,102 +11,100 @@ TOKEN = os.getenv('TWITCH_TOKEN')
 CHANNEL = os.getenv('TWITCH_CHANNEL')
 WS_PORT = 8765
 
+# On garde trace du fichier actuel pour les sauvegardes
+current_filename = 'grille_exemple.json'
 current_grid = {}
 connected_clients = set()
 
-def load_grid():
-    global current_grid
+def load_grid(filename):
+    global current_grid, current_filename
     try:
-        with open('grille_exemple.json', 'r', encoding='utf-8') as f:
+        with open(filename, 'r', encoding='utf-8') as f:
             current_grid = json.load(f)
-        print(f"Grille chargée : {current_grid['title']}")
-    except FileNotFoundError:
-        print("Erreur : Fichier grille_exemple.json introuvable.")
+        current_filename = filename
+        print(f"Grille chargée : {current_grid['title']} ({filename})")
+        return True
+    except Exception as e:
+        print(f"Erreur lors du chargement de {filename}: {e}")
+        return False
 
 def save_grid():
-    """Sauvegarde l'état actuel de la grille dans le fichier JSON"""
-    with open('grille_exemple.json', 'w', encoding='utf-8') as f:
+    """Sauvegarde l'état actuel (mots résolus) dans le fichier JSON"""
+    with open(current_filename, 'w', encoding='utf-8') as f:
         json.dump(current_grid, f, indent=2, ensure_ascii=False)
-    print("Progression sauvegardée dans le JSON.")
+    print(f"Progression sauvegardée dans {current_filename}")
 
 async def websocket_handler(websocket):
-    """Gère la connexion avec l'Overlay OBS"""
     connected_clients.add(websocket)
     try:
-        # Envoie la grille actuelle dès la connexion
+        # Envoi de la grille au chargement de l'overlay
         await websocket.send(json.dumps({"type": "INIT", "grid": current_grid}))
-        await websocket.wait_closed()
+        async for message in websocket:
+            pass
     finally:
         connected_clients.remove(websocket)
 
 async def broadcast_update(data):
-    """Envoie des mises à jour à tous les overlays connectés"""
     if connected_clients:
         message = json.dumps(data)
         await asyncio.gather(*[client.send(message) for client in connected_clients])
 
 class Bot(commands.Bot):
     def __init__(self):
-        super().__init__(
-            token=TOKEN,
-            prefix='!',
-            initial_channels=[CHANNEL]
-        )
+        super().__init__(token=TOKEN, prefix='!', initial_channels=[CHANNEL])
 
     async def event_ready(self):
-        print('-----------------------------------')
-        print(f"Bot connecté : {self.nick}")
-        print(f"Salon actif : {CHANNEL}")
-        print('-----------------------------------')
+        print(f"Bot en ligne | Salon: {CHANNEL}")
 
     async def event_message(self, message):
-        if message.echo:
-            return
-        print(f"CHAT [{message.author.name}]: {message.content}")
+        if message.echo: return
         await self.handle_commands(message)
 
     @commands.command(name='mf')
     async def mot_fleche(self, ctx: commands.Context, num: int, guess: str):
         guess = guess.upper()
-        found = False
-        
         for word in current_grid['words']:
             if str(word['id']) == str(num):
-                found = True
-                # Vérifier si déjà résolu
                 if word.get('solved', False):
-                    await ctx.send(f"@{ctx.author.name}, le mot n°{num} est déjà validé !")
+                    await ctx.send(f"@{ctx.author.name}, le n°{num} est déjà trouvé !")
                     return
 
-                # Vérifier la réponse
                 if word['answer'].upper() == guess:
                     word['solved'] = True
-                    save_grid() # Sauvegarde immédiate
+                    save_grid()
+                    await ctx.send(f"Bravo @{ctx.author.name} ! '{guess}' est correct !")
                     
-                    await ctx.send(f"Bravo @{ctx.author.name} ! {guess} est correct !")
-                    await broadcast_update({
-                        "type": "WORD_SOLVED",
-                        "word_id": num,
-                        "answer": guess
-                    })
+                    # Update Overlay
+                    await broadcast_update({"type": "WORD_SOLVED", "word_id": num, "answer": guess})
+                    
+                    # Vérifier si c'est la fin de la grille
+                    if all(w.get('solved', False) for w in current_grid['words']):
+                        await ctx.send(f"🏆 GRILLE TERMINÉE ! Bien joué tout le monde !")
+                        await broadcast_update({"type": "VICTORY"})
                 else:
-                    await ctx.send(f"@{ctx.author.name}, ce n'est pas ça pour le n°{num}.")
+                    await ctx.send(f"Non @{ctx.author.name}, ce n'est pas ça.")
                 return
-        
-        if not found:
-            await ctx.send(f"@{ctx.author.name}, le numéro {num} n'existe pas sur cette grille.")
+
+    @commands.command(name='grille')
+    async def change_grid(self, ctx: commands.Context, filename: str):
+        # Seul le streamer peut changer de grille
+        if ctx.author.name.lower() != CHANNEL.lower():
+            return
+
+        if not filename.endswith('.json'):
+            filename += '.json'
+            
+        if load_grid(filename):
+            await broadcast_update({"type": "INIT", "grid": current_grid})
+            await ctx.send(f"Nouvelle grille chargée : {current_grid['title']}")
+        else:
+            await ctx.send(f"Fichier {filename} introuvable.")
 
 async def main():
-    load_grid()
-    print(f"Serveur Overlay démarré sur le port {WS_PORT}")
+    load_grid('grille_exemple.json')
     server = await websockets.serve(websocket_handler, "localhost", WS_PORT)
-
     bot = Bot()
-    print("Démarrage du Bot Twitch...")
     await asyncio.gather(server.wait_closed(), bot.start())
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("Arrêt du programme.")
+    asyncio.run(main())
