@@ -11,7 +11,6 @@ TOKEN = os.getenv('TWITCH_TOKEN')
 CHANNEL = os.getenv('TWITCH_CHANNEL')
 WS_PORT = 8765
 
-# On garde trace du fichier actuel pour les sauvegardes
 current_filename = 'grille_exemple.json'
 current_grid = {}
 connected_clients = set()
@@ -22,25 +21,21 @@ def load_grid(filename):
         with open(filename, 'r', encoding='utf-8') as f:
             current_grid = json.load(f)
         current_filename = filename
-        print(f"Grille chargée : {current_grid['title']} ({filename})")
+        print(f"Grille chargée : {current_grid['title']}")
         return True
     except Exception as e:
-        print(f"Erreur lors du chargement de {filename}: {e}")
+        print(f"Erreur : {e}")
         return False
 
 def save_grid():
-    """Sauvegarde l'état actuel (mots résolus) dans le fichier JSON"""
     with open(current_filename, 'w', encoding='utf-8') as f:
         json.dump(current_grid, f, indent=2, ensure_ascii=False)
-    print(f"Progression sauvegardée dans {current_filename}")
 
 async def websocket_handler(websocket):
     connected_clients.add(websocket)
     try:
-        # Envoi de la grille au chargement de l'overlay
         await websocket.send(json.dumps({"type": "INIT", "grid": current_grid}))
-        async for message in websocket:
-            pass
+        async for message in websocket: pass
     finally:
         connected_clients.remove(websocket)
 
@@ -54,11 +49,7 @@ class Bot(commands.Bot):
         super().__init__(token=TOKEN, prefix='!', initial_channels=[CHANNEL])
 
     async def event_ready(self):
-        print(f"Bot en ligne | Salon: {CHANNEL}")
-
-    async def event_message(self, message):
-        if message.echo: return
-        await self.handle_commands(message)
+        print(f"Bot connecté sur {CHANNEL}")
 
     @commands.command(name='mf')
     async def mot_fleche(self, ctx: commands.Context, num: int, guess: str):
@@ -66,39 +57,27 @@ class Bot(commands.Bot):
         for word in current_grid['words']:
             if str(word['id']) == str(num):
                 if word.get('solved', False):
-                    await ctx.send(f"@{ctx.author.name}, le n°{num} est déjà trouvé !")
+                    await ctx.send(f"Déjà trouvé !")
                     return
-
                 if word['answer'].upper() == guess:
                     word['solved'] = True
                     save_grid()
                     await ctx.send(f"Bravo @{ctx.author.name} ! '{guess}' est correct !")
-                    
-                    # Update Overlay
                     await broadcast_update({"type": "WORD_SOLVED", "word_id": num, "answer": guess})
-                    
-                    # Vérifier si c'est la fin de la grille
                     if all(w.get('solved', False) for w in current_grid['words']):
-                        await ctx.send(f"🏆 GRILLE TERMINÉE ! Bien joué tout le monde !")
+                        await ctx.send("🏆 GRILLE TERMINÉE !")
                         await broadcast_update({"type": "VICTORY"})
                 else:
-                    await ctx.send(f"Non @{ctx.author.name}, ce n'est pas ça.")
+                    await ctx.send(f"Faux @{ctx.author.name} !")
                 return
 
     @commands.command(name='grille')
     async def change_grid(self, ctx: commands.Context, filename: str):
-        # Seul le streamer peut changer de grille
-        if ctx.author.name.lower() != CHANNEL.lower():
-            return
-
-        if not filename.endswith('.json'):
-            filename += '.json'
-            
+        if ctx.author.name.lower() != CHANNEL.lower(): return
+        if not filename.endswith('.json'): filename += '.json'
         if load_grid(filename):
             await broadcast_update({"type": "INIT", "grid": current_grid})
-            await ctx.send(f"Nouvelle grille chargée : {current_grid['title']}")
-        else:
-            await ctx.send(f"Fichier {filename} introuvable.")
+            await ctx.send(f"Nouvelle grille : {current_grid['title']}")
 
 async def main():
     load_grid('grille_exemple.json')

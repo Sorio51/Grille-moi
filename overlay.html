@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: transparent; color: white; margin: 0; padding: 20px; display: flex; }
-        #wrapper { display: flex; background: rgba(0, 0, 0, 0.8); padding: 20px; border-radius: 15px; border: 3px solid #9146FF; position: relative; }
-        
-        /* Grille */
-        #grid-container { position: relative; width: 400px; height: 400px; background: #222; margin-right: 25px; border: 1px solid #444; }
+        body { font-family: 'Segoe UI', sans-serif; background: transparent; color: white; margin: 0; padding: 20px; display: flex; }
+        #wrapper { display: flex; background: rgba(0, 0, 0, 0.85); padding: 20px; border-radius: 15px; border: 3px solid #9146FF; position: relative; }
+        #grid-container { position: relative; width: 500px; height: 500px; background: #222; margin-right: 20px; }
         .cell {
             position: absolute; width: 38px; height: 38px; border: 1px solid #444;
             display: flex; align-items: center; justify-content: center;
@@ -15,19 +13,13 @@
         }
         .cell.solved { background-color: #00FF7F; animation: pop 0.4s ease; }
         .cell-num { position: absolute; top: 1px; left: 2px; font-size: 10px; color: #9146FF; }
-
-        /* Indices */
-        #clues-panel { width: 250px; }
+        #clues-panel { width: 300px; }
         .clue-item { font-size: 14px; margin-bottom: 8px; padding: 5px; border-bottom: 1px solid #333; }
         .clue-item.done { text-decoration: line-through; color: #00FF7F; opacity: 0.5; }
-        
-        /* Message de Victoire */
-        #victory-banner {
+        #victory {
             display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: #FFD700; color: black; padding: 30px; border: 5px solid white;
-            font-size: 32px; font-weight: bold; text-align: center; z-index: 10; border-radius: 10px;
+            background: gold; color: black; padding: 20px; font-size: 30px; font-weight: bold; border-radius: 10px; z-index: 100;
         }
-
         @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
     </style>
 </head>
@@ -35,38 +27,34 @@
     <div id="wrapper">
         <div id="grid-container"></div>
         <div id="clues-panel">
-            <h2 style="color:#9146FF; margin-top:0; font-size: 18px;">INDICES</h2>
+            <h2 style="color:#9146FF; margin:0 0 10px 0;">INDICES</h2>
             <div id="clues-list"></div>
         </div>
-        <div id="victory-banner">GRILLE TERMINÉE ! 🏆</div>
+        <div id="victory">🏆 GRILLE TERMINÉE !</div>
     </div>
-
     <script>
         const container = document.getElementById('grid-container');
         const list = document.getElementById('clues-list');
-        const victory = document.getElementById('victory-banner');
+        const victory = document.getElementById('victory');
+        const socket = new WebSocket('ws://localhost:8765');
         let currentGrid = null;
 
-        const socket = new WebSocket('ws://localhost:8765');
-
-        socket.onmessage = function(event) {
+        socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.type === 'INIT') {
                 currentGrid = data.grid;
                 victory.style.display = 'none';
                 render();
             } else if (data.type === 'WORD_SOLVED') {
-                updateWord(data.word_id, data.answer);
+                update(data.word_id, data.answer);
             } else if (data.type === 'VICTORY') {
                 victory.style.display = 'block';
             }
         };
 
         function render() {
-            container.innerHTML = '';
-            list.innerHTML = '';
+            container.innerHTML = ''; list.innerHTML = '';
             currentGrid.words.forEach(word => {
-                // Cellules
                 for (let i = 0; i < word.answer.length; i++) {
                     let x = word.direction === 'horizontal' ? word.x + i : word.x;
                     let y = word.direction === 'vertical' ? word.y + i : word.y;
@@ -74,40 +62,30 @@
                     let cell = document.getElementById(id);
                     if (!cell) {
                         cell = document.createElement('div');
-                        cell.id = id;
-                        cell.className = 'cell';
-                        cell.style.left = (x * 40) + 'px';
-                        cell.style.top = (y * 40) + 'px';
+                        cell.id = id; cell.className = 'cell';
+                        cell.style.left = (x * 40)+'px'; cell.style.top = (y * 40)+'px';
                         container.appendChild(cell);
                     }
                     if (i === 0) cell.innerHTML += `<span class="cell-num">${word.id}</span>`;
-                    if (word.solved) {
-                        cell.innerText = word.answer[i];
-                        cell.classList.add('solved');
-                    }
+                    if (word.solved) { cell.innerText = word.answer[i]; cell.classList.add('solved'); }
                 }
-                // Indice
                 const item = document.createElement('div');
                 item.id = `clue-${word.id}`;
                 item.className = `clue-item ${word.solved ? 'done' : ''}`;
-                item.innerText = `${word.id}. ${word.clue} (${word.answer.length} l.)`;
+                item.innerText = `${word.id}. ${word.clue} en ${word.answer.length}`;
                 list.appendChild(item);
             });
         }
 
-        function updateWord(id, answer) {
+        function update(id, answer) {
             const word = currentGrid.words.find(w => w.id == id);
-            if (!word) return;
             word.solved = true;
             document.getElementById(`clue-${id}`).classList.add('done');
             for (let i = 0; i < answer.length; i++) {
-                let x = word.direction === 'horizontal' ? word.x + i : word.x;
-                let y = word.direction === 'vertical' ? word.y + i : word.y;
+                let x = (word.direction === 'horizontal') ? word.x + i : word.x;
+                let y = (word.direction === 'vertical') ? word.y + i : word.y;
                 let cell = document.getElementById(`c_${x}_${y}`);
-                if (cell) {
-                    cell.innerText = answer[i].toUpperCase();
-                    cell.classList.add('solved');
-                }
+                if (cell) { cell.innerText = answer[i].toUpperCase(); cell.classList.add('solved'); }
             }
         }
     </script>
