@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Overlay Mots Fléchés</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; overflow: hidden; background-color: rgba(0,0,0,0); }
+        #grid-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 5px solid #9146FF;
+            border-radius: 15px;
+            margin: 20px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        .cell {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 1px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 20px;
+            background: white;
+            text-transform: uppercase;
+            box-sizing: border-box;
+        }
+        .cell.solved {
+            background-color: #00FF7F;
+            color: black;
+            animation: pop 0.5s ease-in-out;
+            border-color: #006400;
+        }
+        .clue-box {
+            position: absolute;
+            background: #333;
+            color: white;
+            font-size: 10px;
+            padding: 2px 4px;
+            border-radius: 3px;
+            z-index: 10;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="grid-container"></div>
+
+<script>
+    const container = document.getElementById('grid-container');
+    const socket = new WebSocket('ws://localhost:8765');
+    const CELL_SIZE = 40;
+
+    let savedGrid = null;
+
+    socket.onopen = () => {
+        console.log("Connecté au Bot Python");
+    };
+
+    socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'INIT') {
+            savedGrid = data.grid;
+            buildGrid(data.grid);
+        } else if (data.type === 'WORD_SOLVED') {
+            revealWord(data.word_id, data.answer);
+        }
+    };
+
+    function buildGrid(gridData) {
+        container.innerHTML = '';
+
+        gridData.words.forEach(word => {
+            let currentX = word.x;
+            let currentY = word.y;
+
+            const clue = document.createElement('div');
+            clue.className = 'clue-box';
+            clue.innerText = `${word.id}. ${word.clue}`;
+            clue.style.left = (word.x * CELL_SIZE) + 'px';
+            clue.style.top = (word.y * CELL_SIZE - 20) + 'px';
+            container.appendChild(clue);
+
+            for (let i = 0; i < word.answer.length; i++) {
+                let cellId = `c_${currentX}_${currentY}`;
+                let cell = document.getElementById(cellId);
+
+                if (!cell) {
+                    cell = document.createElement('div');
+                    cell.id = cellId;
+                    cell.className = 'cell';
+                    cell.style.left = (currentX * CELL_SIZE) + 'px';
+                    cell.style.top = (currentY * CELL_SIZE) + 'px';
+                    container.appendChild(cell);
+                }
+
+                if (word.solved) {
+                    cell.innerText = word.answer[i];
+                    cell.classList.add('solved');
+                }
+
+                if (word.direction === 'horizontal') currentX++;
+                else currentY++;
+            }
+        });
+    }
+
+    function revealWord(id, answer) {
+        console.log(`Le mot ${id} (${answer}) a été trouvé !`);
+
+        if (!savedGrid) return;
+        const wordData = savedGrid.words.find(w => w.id === id);
+
+        if (wordData) {
+            let currentX = wordData.x;
+            let currentY = wordData.y;
+
+            for (let i = 0; i < answer.length; i++) {
+                let cellId = `c_${currentX}_${currentY}`;
+                let cell = document.getElementById(cellId);
+
+                if (cell) {
+                    cell.innerText = answer[i];
+                    cell.classList.add('solved');
+                }
+
+                if (wordData.direction === 'horizontal') currentX++;
+                else currentY++;
+            }
+        }
+    }
+</script>
+</body>
+</html>
