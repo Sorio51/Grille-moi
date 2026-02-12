@@ -11,7 +11,7 @@
       "x": 0,
       "y": 0,
       "direction": "horizontal",
-      "solved": false
+      "solved": true
     },
     {
       "id": 2,
@@ -20,7 +20,7 @@
       "x": 3,
       "y": 0,
       "direction": "vertical",
-      "solved": false
+      "solved": true
     }
   ]
 }
