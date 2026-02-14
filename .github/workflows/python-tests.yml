@@ -16,5 +16,4 @@ jobs:
           pip install twitchio websockets python-dotenv
       - name: Run Unit Tests
         run: |
-          python -m unittest test_generator.py
-          python -m unittest test_main.py
+          python -m unittest discover tests -v
