@@ -131,7 +131,11 @@
         function connect() {
             socket = new WebSocket(WS_URL);
 
-            socket.onopen = () => console.log("Connecté au serveur de jeu");
+            socket.onopen = () => {
+                console.log("✅ Connecté au serveur de jeu");
+                const errorMsg = document.getElementById('connection-error');
+                if (errorMsg) errorMsg.remove();
+            };
 
             socket.onmessage = (event) => {
                 const data = JSON.parse(event.data);
@@ -148,7 +152,31 @@
                 }
             };
 
-            socket.onclose = () => setTimeout(connect, 2000);
+            socket.onclose = () => {
+                console.log("❌ Connexion fermée, reconnexion dans 2s...");
+                showConnectionError();
+                setTimeout(connect, 2000);
+            };
+
+            socket.onerror = () => {
+                console.log("❌ Erreur de connexion WebSocket");
+                showConnectionError();
+            };
+        }
+
+        function showConnectionError() {
+            const existing = document.getElementById('connection-error');
+            if (existing) return;
+            const errorDiv = document.createElement('div');
+            errorDiv.id = 'connection-error';
+            errorDiv.style.cssText = `
+                position: fixed; top: 20px; right: 20px;
+                background: rgba(255,0,0,0.8); color: white;
+                padding: 15px 20px; border-radius: 8px;
+                font-size: 14px; z-index: 10000;
+            `;
+            errorDiv.innerHTML = '🔄 Reconnexion au serveur...';
+            document.body.appendChild(errorDiv);
         }
 
         function renderGrid(grid) {
@@ -157,7 +185,13 @@
             container.innerHTML = "";
             list.innerHTML = "";
 
-            if (!grid.words) return;
+            if (!grid || !grid.words || !Array.isArray(grid.words) || grid.words.length === 0) {
+                const noGridMsg = document.createElement('div');
+                noGridMsg.style.cssText = 'color: #999; text-align: center; padding: 50px; font-size: 18px;';
+                noGridMsg.innerHTML = '🔄 En attente d\'une grille...<br><small>Utilisez !reset_grille sur Twitch</small>';
+                container.appendChild(noGridMsg);
+                return;
+            }
 
             const cellsMap = {};
 

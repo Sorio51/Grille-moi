@@ -1,0 +1,76 @@
+{
+  "words": [
+    {
+      "id": 1,
+      "clue": "Langage web côté client",
+      "answer": "JAVASCRIPT",
+      "x": 2,
+      "y": 7,
+      "direction": "horizontal",
+      "solved": false
+    },
+    {
+      "id": 2,
+      "clue": "De gauche à droite",
+      "answer": "HORIZONTAL",
+      "x": 4,
+      "y": 13,
+      "direction": "horizontal",
+      "solved": false
+    },
+    {
+      "id": 3,
+      "clue": "Diffusion en direct",
+      "answer": "STREAMING",
+      "x": 1,
+      "y": 0,
+      "direction": "horizontal",
+      "solved": false
+    },
+    {
+      "id": 4,
+      "clue": "Protocole de communication temps réel",
+      "answer": "WEBSOCKET",
+      "x": 14,
+      "y": 4,
+      "direction": "vertical",
+      "solved": false
+    },
+    {
+      "id": 5,
+      "clue": "Réponse correcte au problème",
+      "answer": "SOLUTION",
+      "x": 4,
+      "y": 10,
+      "direction": "horizontal",
+      "solved": false
+    },
+    {
+      "id": 6,
+      "clue": "De haut en bas",
+      "answer": "VERTICAL",
+      "x": 6,
+      "y": 2,
+      "direction": "horizontal",
+      "solved": false
+    },
+    {
+      "id": 7,
+      "clue": "Fin de partie réussie",
+      "answer": "VICTOIRE",
+      "x": 3,
+      "y": 4,
+      "direction": "horizontal",
+      "solved": false
+    },
+    {
+      "id": 8,
+      "clue": "Robot conversationnel",
+      "answer": "CHATBOT",
+      "x": 0,
+      "y": 6,
+      "direction": "vertical",
+      "solved": false
+    }
+  ]
+}

@@ -85,6 +85,20 @@ class Bot(commands.Bot):
         print(f"✅ Bot Twitch connecté : {self.nick}")
         print(f"🚀 Serveur WebSocket sur le port {WS_PORT}")
 
+    async def event_command_error(self, ctx: commands.Context, error):
+        """Gestionnaire d'erreurs pour les commandes"""
+        from twitchio.ext.commands.errors import MissingRequiredArgument, BadArgument
+        if isinstance(error, MissingRequiredArgument):
+            if ctx.command.name == 'mf':
+                await ctx.send(f"❓ @{ctx.author.name}, utilise : !mf <numéro> <réponse> (ex: !mf 1 PYTHON)")
+            else:
+                await ctx.send(f"❓ @{ctx.author.name}, arguments manquants pour !{ctx.command.name}")
+        elif isinstance(error, BadArgument):
+            if ctx.command.name == 'mf':
+                await ctx.send(f"❓ @{ctx.author.name}, le numéro doit être un chiffre (ex: !mf 1 PYTHON)")
+        else:
+            print(f"Erreur commande non gérée: {error}")
+
     @commands.command(name='mf')
     async def mot_fleche(self, ctx: commands.Context, num: int, guess: str):
         guess = guess.upper()
@@ -145,7 +159,12 @@ class Bot(commands.Bot):
             await ctx.send(f"📊 @{ctx.author.name}, tu n'as pas encore de points.")
 
 async def main():
-    load_grid('grille_exemple.json')
+    if not load_grid('grille_exemple.json'):
+        print("📝 Aucune grille trouvée, génération d'une nouvelle grille...")
+        gen = GridGenerator(size=15)
+        gen.generate(nb_words=8, min_words=5)
+        load_grid('grille_exemple.json')
+        print("✅ Grille par défaut générée et chargée")
 
     server = await websockets.serve(websocket_handler, "localhost", WS_PORT)
     bot = Bot()

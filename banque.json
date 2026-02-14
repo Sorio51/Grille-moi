@@ -1,0 +1,22 @@
+[
+    ["PYTHON", "Langage de programmation serpentin"],
+    ["TWITCH", "Plateforme de streaming violette"],
+    ["OVERLAY", "Couche graphique par-dessus"],
+    ["WEBSOCKET", "Protocole de communication temps réel"],
+    ["JAVASCRIPT", "Langage web côté client"],
+    ["HTML", "Langage de balisage web"],
+    ["STREAMING", "Diffusion en direct"],
+    ["CHATBOT", "Robot conversationnel"],
+    ["GRILLE", "Mot croisé à résoudre"],
+    ["INDICES", "Définitions pour trouver les mots"],
+    ["SCORE", "Points accumulés par le joueur"],
+    ["VICTOIRE", "Fin de partie réussie"],
+    ["LETTRE", "Caractère alphabétique"],
+    ["HORIZONTAL", "De gauche à droite"],
+    ["VERTICAL", "De haut en bas"],
+    ["CROISE", "Se coupe avec un autre mot"],
+    ["SOLUTION", "Réponse correcte au problème"],
+    ["ENIGME", "Mystère à résoudre"],
+    ["DEFI", "Challenge à relever"],
+    ["JEU", "Activité ludique"]
+]
