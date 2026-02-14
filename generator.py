@@ -112,7 +112,8 @@ class GridGenerator:
                         placed = True
                         break
 
-        new_history = list(set(history + local_history))
+        history_strings = [h for h in history if isinstance(h, str)]
+        new_history = list(set(history_strings + local_history))
         with open("grille_exemple.json", "w", encoding="utf-8") as f:
             json.dump({"words": self.placed_words}, f, indent=2, ensure_ascii=False)
         with open("historique.json", "w", encoding="utf-8") as f:

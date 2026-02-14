@@ -132,6 +132,17 @@ class Bot(commands.Bot):
         entries = [f"{i+1}. {user} ({pts}pts)" for i, (user, pts) in enumerate(top)]
         await ctx.send(message + " | ".join(entries))
 
+    @commands.command(name='score')
+    async def score(self, ctx: commands.Context):
+        """Affiche le score personnel de l'utilisateur"""
+        user_name = ctx.author.name.lower()
+        if os.path.exists(SCORES_FILE):
+            with open(SCORES_FILE, 'r', encoding='utf-8') as f:
+                scores = json.load(f)
+                user_score = scores.get(user_name, 0)
+            await ctx.send(f"📊 @{ctx.author.name}, tu as actuellement {user_score} points !")
+        else:
+            await ctx.send(f"📊 @{ctx.author.name}, tu n'as pas encore de points.")
 
 async def main():
     load_grid('grille_exemple.json')
