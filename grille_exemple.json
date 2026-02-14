@@ -1,78 +1,65 @@
 {
-  "id": "gen_666",
-  "title": "Grille Aléatoire",
-  "width": 12,
-  "height": 12,
   "words": [
     {
       "id": 1,
-      "clue": "Pour taper du texte",
-      "answer": "CLAVIER",
+      "clue": "Passionné de jeux vidéo",
+      "answer": "GAMER",
+      "x": 5,
+      "y": 7,
+      "direction": "horizontal",
+      "solved": false
+    },
+    {
+      "id": 2,
+      "clue": "Pour se faire entendre",
+      "answer": "MICRO",
       "x": 2,
       "y": 2,
       "direction": "horizontal",
       "solved": true
     },
     {
-      "id": 2,
-      "clue": "Langage de programmation",
-      "answer": "PYTHON",
-      "x": 6,
-      "y": 4,
-      "direction": "horizontal",
-      "solved": false
-    },
-    {
       "id": 3,
-      "clue": "Plateforme de streaming",
-      "answer": "TWITCH",
-      "x": 3,
-      "y": 5,
-      "direction": "horizontal",
+      "clue": "Point sur un écran",
+      "answer": "PIXEL",
+      "x": 0,
+      "y": 10,
+      "direction": "vertical",
       "solved": false
     },
     {
       "id": 4,
-      "clue": "Diffusion en direct",
-      "answer": "STREAM",
-      "x": 3,
-      "y": 8,
+      "clue": "Il miaule ou on y écrit",
+      "answer": "CHAT",
+      "x": 5,
+      "y": 4,
+      "direction": "horizontal",
+      "solved": true
+    },
+    {
+      "id": 5,
+      "clue": "Série d'instructions",
+      "answer": "CODE",
+      "x": 6,
+      "y": 14,
       "direction": "horizontal",
       "solved": false
     },
     {
-      "id": 5,
-      "clue": "Petit rongeur ou accessoire PC",
-      "answer": "SOURIS",
-      "x": 10,
-      "y": 3,
-      "direction": "vertical",
-      "solved": false
-    },
-    {
       "id": 6,
-      "clue": "Il miaule ou on y écrit",
-      "answer": "CHAT",
-      "x": 1,
-      "y": 7,
-      "direction": "vertical",
+      "clue": "Assistant automatisé",
+      "answer": "BOT",
+      "x": 9,
+      "y": 9,
+      "direction": "horizontal",
       "solved": false
     },
     {
       "id": 7,
-      "clue": "Série d'instructions",
-      "answer": "CODE",
-      "x": 11,
-      "y": 6,
-      "direction": "vertical",
-      "solved": false
-    },
-    {
-      "id": 8,
-      "clue": "Assistant automatisé",
-      "answer": "BOT",
-      "x": 2,
-      "y": 10,
+      "clue": "La toile mondiale",
+      "answer": "WEB",
+      "x": 5,
+      "y": 11,
       "direction": "horizontal",
       "solved": false
     }

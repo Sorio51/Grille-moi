@@ -2,92 +2,243 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <title>Mots Fléchés Twitch Overlay</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: transparent; color: white; margin: 0; padding: 20px; display: flex; }
-        #wrapper { display: flex; background: rgba(0, 0, 0, 0.85); padding: 20px; border-radius: 15px; border: 3px solid #9146FF; position: relative; }
-        #grid-container { position: relative; width: 500px; height: 500px; background: #222; margin-right: 20px; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: transparent;
+            color: white;
+            display: flex;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        #wrapper {
+            display: flex;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 25px;
+            border-radius: 20px;
+            border: 4px solid #9146FF;
+            position: relative;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+
+        #grid-container {
+            position: relative;
+            width: 600px;
+            height: 600px;
+            background: #111;
+            margin-right: 30px;
+            border-radius: 8px;
+            border: 2px solid #333;
+        }
+
         .cell {
-            position: absolute; width: 38px; height: 38px; border: 1px solid #444;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: bold; font-size: 20px; background: white; color: black; text-transform: uppercase;
+            position: absolute;
+            width: 38px;
+            height: 38px;
+            border: 1px solid #444;
+            background: #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .cell.solved { background-color: #00FF7F; animation: pop 0.4s ease; }
-        .cell-num { position: absolute; top: 1px; left: 2px; font-size: 10px; color: #9146FF; }
-        #clues-panel { width: 300px; }
-        .clue-item { font-size: 14px; margin-bottom: 8px; padding: 5px; border-bottom: 1px solid #333; }
-        .clue-item.done { text-decoration: line-through; color: #00FF7F; opacity: 0.5; }
-        #victory {
-            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: gold; color: black; padding: 20px; font-size: 30px; font-weight: bold; border-radius: 10px; z-index: 100;
+
+        .cell.solved {
+            background: #9146FF !important;
+            color: white;
+            font-weight: bold;
+            font-size: 22px;
+            border-color: #a970ff;
         }
-        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+        @keyframes gold-flash {
+            0% { background-color: white; transform: scale(1); }
+            50% { background-color: #ffd700; transform: scale(1.15); z-index: 10; }
+            100% { background-color: #9146FF; transform: scale(1); }
+        }
+
+        .just-solved {
+            animation: gold-flash 0.8s ease-in-out;
+        }
+
+        .cell-num {
+            position: absolute; top: 1px; left: 2px;
+            font-size: 10px; color: #444; font-weight: bold;
+        }
+
+        .cell-letter { color: #222; }
+        .solved .cell-letter { color: white; }
+
+        #clues-container { width: 350px; }
+        h2 { margin-top: 0; color: #9146FF; border-bottom: 2px solid #9146FF; padding-bottom: 5px; }
+        #clues-list { list-style: none; padding: 0; max-height: 550px; overflow-y: auto; }
+
+        .clue-item {
+            margin-bottom: 10px;
+            padding: 8px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        .clue-item.done {
+            text-decoration: line-through;
+            opacity: 0.4;
+            background: rgba(145, 70, 255, 0.2);
+        }
+
+        #notification-banner {
+            position: fixed;
+            top: -120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #9146FF 0%, #d4af37 100%);
+            color: white;
+            padding: 20px 60px;
+            border-radius: 0 0 30px 30px;
+            font-size: 28px;
+            font-weight: 900;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            z-index: 9999;
+            transition: top 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 3px solid gold;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        #notification-banner.show { top: 0; }
+
     </style>
 </head>
 <body>
+
+    <div id="notification-banner">✨ BRAVO @PSEUDO ! ✨</div>
+
     <div id="wrapper">
         <div id="grid-container"></div>
-        <div id="clues-panel">
-            <h2 style="color:#9146FF; margin:0 0 10px 0;">INDICES</h2>
-            <div id="clues-list"></div>
+        <div id="clues-container">
+            <h2>Indices</h2>
+            <ul id="clues-list"></ul>
         </div>
-        <div id="victory">🏆 GRILLE TERMINÉE !</div>
     </div>
+
     <script>
-        const container = document.getElementById('grid-container');
-        const list = document.getElementById('clues-list');
-        const victory = document.getElementById('victory');
-        const socket = new WebSocket('ws://localhost:8765');
-        let currentGrid = null;
+        const WS_URL = "ws://localhost:8765";
+        let socket;
+        let currentGridData = null;
 
-        socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'INIT') {
-                currentGrid = data.grid;
-                victory.style.display = 'none';
-                render();
-            } else if (data.type === 'WORD_SOLVED') {
-                update(data.word_id, data.answer);
-            } else if (data.type === 'VICTORY') {
-                victory.style.display = 'block';
-            }
-        };
+        function connect() {
+            socket = new WebSocket(WS_URL);
 
-        function render() {
-            container.innerHTML = ''; list.innerHTML = '';
-            currentGrid.words.forEach(word => {
-                for (let i = 0; i < word.answer.length; i++) {
-                    let x = word.direction === 'horizontal' ? word.x + i : word.x;
-                    let y = word.direction === 'vertical' ? word.y + i : word.y;
-                    let id = `c_${x}_${y}`;
-                    let cell = document.getElementById(id);
-                    if (!cell) {
-                        cell = document.createElement('div');
-                        cell.id = id; cell.className = 'cell';
-                        cell.style.left = (x * 40)+'px'; cell.style.top = (y * 40)+'px';
-                        container.appendChild(cell);
-                    }
-                    if (i === 0) cell.innerHTML += `<span class="cell-num">${word.id}</span>`;
-                    if (word.solved) { cell.innerText = word.answer[i]; cell.classList.add('solved'); }
+            socket.onopen = () => console.log("Connecté au serveur de jeu");
+
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === "INIT") {
+                    currentGridData = data.grid;
+                    renderGrid(data.grid);
                 }
-                const item = document.createElement('div');
+                else if (data.type === "WORD_SOLVED") {
+                    updateWord(data.word_id, data.answer, data.user);
+                }
+                else if (data.type === "VICTORY") {
+                    showVictory();
+                }
+            };
+
+            socket.onclose = () => setTimeout(connect, 2000);
+        }
+
+        function renderGrid(grid) {
+            const container = document.getElementById('grid-container');
+            const list = document.getElementById('clues-list');
+            container.innerHTML = "";
+            list.innerHTML = "";
+
+            if (!grid.words) return;
+
+            const cellsMap = {};
+
+            grid.words.forEach(word => {
+                const item = document.createElement('li');
                 item.id = `clue-${word.id}`;
                 item.className = `clue-item ${word.solved ? 'done' : ''}`;
                 item.innerText = `${word.id}. ${word.clue} en ${word.answer.length}`;
                 list.appendChild(item);
-            });
-        }
 
-        function update(id, answer) {
-            const word = currentGrid.words.find(w => w.id == id);
-            word.solved = true;
-            document.getElementById(`clue-${id}`).classList.add('done');
-            for (let i = 0; i < answer.length; i++) {
-                let x = (word.direction === 'horizontal') ? word.x + i : word.x;
-                let y = (word.direction === 'vertical') ? word.y + i : word.y;
-                let cell = document.getElementById(`c_${x}_${y}`);
-                if (cell) { cell.innerText = answer[i].toUpperCase(); cell.classList.add('solved'); }
+                for (let i = 0; i < word.answer.length; i++) {
+                    let x = word.direction === 'horizontal' ? word.x + i : word.x;
+                    let y = word.direction === 'vertical' ? word.y + i : word.y;
+                    let key = `${x}_${y}`;
+
+                    if (!cellsMap[key]) {
+                        const cell = document.createElement('div');
+                        cell.id = `c_${x}_${y}`;
+                        cell.className = "cell";
+                        cell.style.left = (x * 40) + "px";
+                        cell.style.top = (y * 40) + "px";
+                        cell.innerHTML = `<span class="cell-letter"></span>`;
+                        container.appendChild(cell);
+                        cellsMap[key] = { el: cell, numbers: [] };
+                    }
+
+                    if (i === 0) cellsMap[key].numbers.push(word.id);
+
+                    if (word.solved) {
+                        cellsMap[key].el.classList.add('solved');
+                        cellsMap[key].el.querySelector('.cell-letter').innerText = word.answer[i];
+                    }
+                }
+            });
+
+            for (let key in cellsMap) {
+                if (cellsMap[key].numbers.length > 0) {
+                    const numSpan = document.createElement('span');
+                    numSpan.className = 'cell-num';
+                    numSpan.innerText = cellsMap[key].numbers.join('/');
+                    cellsMap[key].el.appendChild(numSpan);
+                }
             }
         }
+
+        function updateWord(id, answer, username) {
+            const word = currentGridData.words.find(w => w.id == id);
+            if (!word) return;
+            word.solved = true;
+
+            const banner = document.getElementById('notification-banner');
+            banner.innerText = `✨ BRAVO @${username || 'Quelqu\'un'} ! ✨`;
+            banner.classList.add('show');
+            setTimeout(() => banner.classList.remove('show'), 4000);
+
+            const clueEl = document.getElementById(`clue-${id}`);
+            if (clueEl) clueEl.classList.add('done');
+
+            for (let i = 0; i < answer.length; i++) {
+                let x = word.direction === 'horizontal' ? word.x + i : word.x;
+                let y = word.direction === 'vertical' ? word.y + i : word.y;
+                const cell = document.getElementById(`c_${x}_${y}`);
+
+                if (cell) {
+                    setTimeout(() => {
+                        cell.querySelector('.cell-letter').innerText = answer[i].toUpperCase();
+                        cell.classList.add('solved');
+                        cell.classList.add('just-solved');
+                        setTimeout(() => cell.classList.remove('just-solved'), 1000);
+                    }, i * 100);
+                }
+            }
+        }
+
+        function showVictory() {
+            const banner = document.getElementById('notification-banner');
+            banner.style.background = "linear-gradient(90deg, #ffd700, #ff8c00)";
+            banner.innerText = "🏆 GRILLE TERMINÉE ! MERCI À TOUS ! 🏆";
+            banner.classList.add('show');
+        }
+        connect();
     </script>
 </body>
 </html>
